@@ -1,7 +1,24 @@
 import { neon } from '@neondatabase/serverless';
+import crypto from 'crypto';
 // Force redeploy v2
 
 const sql = neon(process.env.DATABASE_URL);
+const JWT_SECRET = process.env.JWT_SECRET || 'chismoso-secret-change-me';
+
+function verifyJWT(token) {
+  try {
+    const [headerB64, payloadB64, signature] = token.split('.');
+    const expectedSig = crypto
+      .createHmac('sha256', JWT_SECRET)
+      .update(`${headerB64}.${payloadB64}`)
+      .digest('base64url');
+
+    if (signature !== expectedSig) return null;
+    return JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+  } catch (_) {
+    return null;
+  }
+}
 
 function isAdminEmail(email) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -44,19 +61,41 @@ async function ensureUsersTable() {
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Email');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Email');
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Chismoso-Version', 'users-v4');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Check admin from header or query
-  const adminEmail = req.headers['x-admin-email'] || req.query.adminEmail;
-  if (!isAdminEmail(adminEmail)) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  // Prefer role-based access (Developer) via JWT; fallback to ADMIN_EMAILS for legacy.
+  let authorized = false;
+  const authHeader = req.headers.authorization || '';
+  const token = String(authHeader).replace(/^Bearer\s+/i, '').trim();
+
+  try {
+    if (token) {
+      const payload = verifyJWT(token);
+      if (payload?.userId) {
+        await ensureUsersTable();
+        const me = await sql`SELECT id, email, role FROM users WHERE id = ${payload.userId}`;
+        if (me.length > 0 && String(me[0].role || '').toLowerCase() === 'developer') {
+          authorized = true;
+        }
+      }
+    }
+  } catch (_) {
+    // Ignore and fallback to env-based admin
+  }
+
+  if (!authorized) {
+    const adminEmail = req.headers['x-admin-email'] || req.query.adminEmail;
+    if (!isAdminEmail(adminEmail)) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
   }
 
   try {
+    // ensureUsersTable may already have been called during authorization.
     await ensureUsersTable();
 
     const source = String(req.query?.source || '').trim().toLowerCase();
