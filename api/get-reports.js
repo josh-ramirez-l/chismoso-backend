@@ -56,11 +56,12 @@ function isAdminEmail(email) {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Cache-Control', 'no-store');
   
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'GET' && req.method !== 'DELETE') return res.status(405).json({ error: 'Method not allowed' });
 
   const { adminEmail } = req.query;
 
@@ -92,6 +93,31 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (req.method === 'DELETE') {
+      const type = String(req.query?.type || '').trim().toLowerCase();
+      const id = Number(req.query?.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return res.status(400).json({ error: 'Missing or invalid id' });
+      }
+
+      let deleted = null;
+      if (type === 'weekly') {
+        const result = await sql`DELETE FROM weekly_checkins WHERE id = ${id} RETURNING id`;
+        deleted = result?.[0] || null;
+      } else if (type === 'monthly') {
+        const result = await sql`DELETE FROM monthly_reports WHERE id = ${id} RETURNING id`;
+        deleted = result?.[0] || null;
+      } else {
+        return res.status(400).json({ error: 'Invalid type (expected weekly|monthly)' });
+      }
+
+      if (!deleted) {
+        return res.status(404).json({ error: 'Report not found' });
+      }
+
+      return res.status(200).json({ success: true, deleted: { type, id: deleted.id } });
+    }
+
     const weeklyResult = await sql`SELECT * FROM weekly_checkins ORDER BY submitted_at DESC`;
     const monthlyResult = await sql`SELECT * FROM monthly_reports ORDER BY submitted_at DESC`;
 
