@@ -37,6 +37,8 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Email');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Chismoso-Version', 'users-v4');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -75,7 +77,10 @@ export default async function handler(req, res) {
       ORDER BY created_at DESC
     `;
 
-    res.status(200).json({ users: users || [] });
+    res.status(200).json({
+      users: Array.isArray(users) ? users : [],
+      meta: { version: 'users-v4' }
+    });
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: error.message });
