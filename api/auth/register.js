@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import crypto from 'crypto';
 
 const sql = neon(process.env.DATABASE_URL);
 const JWT_SECRET = process.env.JWT_SECRET || 'chismoso-secret-change-me';
@@ -12,7 +13,6 @@ function createJWT(payload) {
   const header = { alg: 'HS256', typ: 'JWT' };
   const headerB64 = base64url(JSON.stringify(header));
   const payloadB64 = base64url(JSON.stringify({ ...payload, iat: Date.now() }));
-  const crypto = require('crypto');
   const signature = crypto
     .createHmac('sha256', JWT_SECRET)
     .update(`${headerB64}.${payloadB64}`)
@@ -22,7 +22,6 @@ function createJWT(payload) {
 
 // Simple password hashing (for demo; use bcrypt in production)
 function hashPassword(password) {
-  const crypto = require('crypto');
   return crypto.createHash('sha256').update(password + JWT_SECRET).digest('hex');
 }
 

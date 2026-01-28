@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import crypto from 'crypto';
 
 const sql = neon(process.env.DATABASE_URL);
 const JWT_SECRET = process.env.JWT_SECRET || 'chismoso-secret-change-me';
@@ -6,7 +7,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'chismoso-secret-change-me';
 function verifyJWT(token) {
   try {
     const [headerB64, payloadB64, signature] = token.split('.');
-    const crypto = require('crypto');
     const expectedSig = crypto
       .createHmac('sha256', JWT_SECRET)
       .update(`${headerB64}.${payloadB64}`)
