@@ -40,20 +40,21 @@ export default async function handler(req, res) {
   try {
     await ensureUsersTable();
 
+    // Use provided values, fall back to existing values only if not provided
     const result = await sql`
       INSERT INTO users (email, name, position, role, kpis, last_seen_at)
       VALUES (${email}, ${name || null}, ${position || null}, ${role || 'user'}, ${kpis || null}, NOW())
       ON CONFLICT (email)
       DO UPDATE SET
-        name = COALESCE(EXCLUDED.name, users.name),
-        position = COALESCE(EXCLUDED.position, users.position),
-        role = COALESCE(EXCLUDED.role, users.role),
-        kpis = COALESCE(EXCLUDED.kpis, users.kpis),
+        name = COALESCE(${name || null}, users.name),
+        position = COALESCE(${position || null}, users.position),
+        role = COALESCE(${role || null}, users.role),
+        kpis = COALESCE(${kpis || null}, users.kpis),
         last_seen_at = NOW()
       RETURNING id, email, name, position, role, kpis, created_at, last_seen_at
     `;
 
-    res.status(200).json({ success: true, user: result.rows?.[0] || null });
+    res.status(200).json({ success: true, user: result[0] || null });
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: error.message });
