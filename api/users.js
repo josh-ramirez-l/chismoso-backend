@@ -23,6 +23,7 @@ async function ensureUsersTable() {
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255),
       name VARCHAR(255),
       position VARCHAR(255),
       role VARCHAR(64),
@@ -31,6 +32,13 @@ async function ensureUsersTable() {
       last_seen_at TIMESTAMP DEFAULT NOW()
     )
   `;
+
+  // Migration safety: some older deployments created the users table without password_hash.
+  try {
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)`;
+  } catch (_) {
+    // Non-fatal
+  }
 }
 
 export default async function handler(req, res) {
@@ -50,6 +58,9 @@ export default async function handler(req, res) {
 
   try {
     await ensureUsersTable();
+
+    const source = String(req.query?.source || '').trim().toLowerCase();
+    const onlyOnboarding = source === 'onboarding';
 
     // DELETE: cleanup specific users
     if (req.method === 'DELETE') {
@@ -71,15 +82,25 @@ export default async function handler(req, res) {
     // GET: list users
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-    const users = await sql`
-      SELECT id, email, name, position, role, kpis, created_at, last_seen_at
-      FROM users
-      ORDER BY created_at DESC
-    `;
+    const users = onlyOnboarding
+      ? await sql`
+          SELECT id, email, name, position, role, kpis, created_at, last_seen_at
+          FROM users
+          WHERE password_hash IS NOT NULL AND password_hash <> ''
+          ORDER BY created_at DESC
+        `
+      : await sql`
+          SELECT id, email, name, position, role, kpis, created_at, last_seen_at
+          FROM users
+          ORDER BY created_at DESC
+        `;
 
     res.status(200).json({
       users: Array.isArray(users) ? users : [],
-      meta: { version: 'users-v4' }
+      meta: {
+        version: 'users-v4',
+        source: source || 'all'
+      }
     });
   } catch (error) {
     console.error('Error:', error);
