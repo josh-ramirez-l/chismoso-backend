@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chismoso Privacy Policy</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: rgba(255,255,255,0.06);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.72);
+      --border: rgba(255,255,255,0.14);
+      --link: #8ab4ff;
+    }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 30% 0%, #14224a 0%, var(--bg) 55%), var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 18px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 22px;
+      backdrop-filter: blur(10px);
+    }
+    h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.02em; }
+    .meta { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+    h2 { margin: 22px 0 10px; font-size: 18px; }
+    ul { margin: 8px 0 0 18px; }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .footer { margin-top: 18px; color: var(--muted); font-size: 12px; }
+    code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Privacy Policy (Chismoso)</h1>
+      <div class="meta"><strong>Effective date:</strong> January 28, 2026</div>
+
+      <p>This Privacy Policy explains what information the Chismoso browser extension (“Chismoso”, “we”, “us”) collects, how it is used, and how it is processed.</p>
+
+      <h2>What data we collect</h2>
+      <p>Chismoso may collect and store the following information, depending on features you use:</p>
+      <ul>
+        <li><strong>Account &amp; profile data:</strong> name, email address, job title/position, role (e.g., Team Member / Administrator / Developer), and KPI text you provide.</li>
+        <li><strong>User-generated content:</strong> weekly check-ins, monthly reports, and other text you submit in the extension.</li>
+        <li><strong>Usage and operational data:</strong> timestamps such as when reports are submitted (e.g., <code>submitted_at</code>) and “last seen”/activity timestamps.</li>
+      </ul>
+
+      <h2>How we use your data</h2>
+      <p>We use the data above to:</p>
+      <ul>
+        <li>Provide the core functionality of the extension (profile setup, reminders, saving and displaying check-ins/reports).</li>
+        <li>Generate and display admin/activity views (e.g., lists of submitted reports).</li>
+        <li>Generate AI-assisted summaries and reports when requested.</li>
+        <li>Maintain service integrity and basic troubleshooting (e.g., identifying and resolving errors).</li>
+      </ul>
+
+      <h2>Where data is stored</h2>
+      <p>Depending on the feature:</p>
+      <ul>
+        <li><strong>Local extension storage:</strong> Some data may be stored locally in your browser using Chrome extension storage.</li>
+        <li><strong>Backend database (server-side):</strong> Chismoso uses a hosted backend service and database to store and retrieve team data (for example: users, weekly check-ins, monthly reports). This enables account-based access and shared admin views.</li>
+      </ul>
+
+      <h2>Backend processing &amp; third-party services</h2>
+      <p>Chismoso uses a backend service to process requests from the extension.</p>
+      <ul>
+        <li><strong>AI processing (Gemini):</strong> When you use AI-powered features, your inputs (for example, report content) may be sent from the extension to our backend, and the backend may send that content to third-party AI services such as the <strong>Gemini API</strong> to generate responses/summaries.</li>
+        <li>We only send the information necessary to perform the requested AI task.</li>
+      </ul>
+
+      <h2>Sharing</h2>
+      <p>We do not sell your personal information.</p>
+      <p>We may share data only:</p>
+      <ul>
+        <li>With service providers needed to run the app (e.g., hosting, database, AI provider) to provide the requested functionality.</li>
+        <li>When required by law, or to protect the security and integrity of the service.</li>
+      </ul>
+
+      <h2>Data retention</h2>
+      <ul>
+        <li>Data stored in the backend may be retained to provide ongoing access to history and admin views.</li>
+        <li>Administrators/Developers may delete individual reports from the Activity feed (server-side). If a user resubmits a report, it will appear again.</li>
+      </ul>
+
+      <h2>Security</h2>
+      <p>We take reasonable measures to protect data in transit and at rest. No method of transmission or storage is 100% secure.</p>
+
+      <h2>Your choices</h2>
+      <ul>
+        <li>You can update profile fields from the Settings/Profile area.</li>
+        <li>You can export your local data from the extension.</li>
+        <li>If you need deletion or access requests beyond what the UI provides, contact the administrator of your Chismoso deployment.</li>
+      </ul>
+
+      <h2>Changes to this policy</h2>
+      <p>We may update this policy from time to time. If we make material changes, we will update the effective date.</p>
+
+      <h2>Contact</h2>
+      <p>If you have questions about this Privacy Policy, contact the maintainer of your Chismoso deployment.</p>
+
+      <div class="footer">
+        Back to <a href="./index.html">docs index</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
