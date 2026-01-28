@@ -1,6 +1,43 @@
 import { neon } from '@neondatabase/serverless';
+import crypto from 'crypto';
 
 const sql = neon(process.env.DATABASE_URL);
+const JWT_SECRET = process.env.JWT_SECRET || 'chismoso-secret-change-me';
+
+function verifyJWT(token) {
+  try {
+    const [headerB64, payloadB64, signature] = token.split('.');
+    const expectedSig = crypto
+      .createHmac('sha256', JWT_SECRET)
+      .update(`${headerB64}.${payloadB64}`)
+      .digest('base64url');
+    if (signature !== expectedSig) return null;
+    return JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+  } catch (_) {
+    return null;
+  }
+}
+
+async function ensureUsersTable() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255),
+      name VARCHAR(255),
+      position VARCHAR(255),
+      role VARCHAR(64),
+      kpis TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      last_seen_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  try {
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)`;
+  } catch (_) {
+    // Non-fatal
+  }
+}
 
 function isAdminEmail(email) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -20,29 +57,44 @@ function isAdminEmail(email) {
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const { adminEmail } = req.query;
 
-  // Simple admin check
-  if (!isAdminEmail(adminEmail)) {
+  // Prefer role-based access (Developer) via JWT; fallback to ADMIN_EMAILS for legacy.
+  let authorized = false;
+  const authHeader = req.headers.authorization || '';
+  const token = String(authHeader).replace(/^Bearer\s+/i, '').trim();
+
+  try {
+    if (token) {
+      const payload = verifyJWT(token);
+      if (payload?.userId) {
+        await ensureUsersTable();
+        const me = await sql`SELECT id, role FROM users WHERE id = ${payload.userId}`;
+        if (me.length > 0 && String(me[0].role || '').toLowerCase() === 'developer') {
+          authorized = true;
+        }
+      }
+    }
+  } catch (_) {
+    // ignore
+  }
+
+  if (!authorized && !isAdminEmail(adminEmail)) {
     return res.status(403).json({ error: 'Unauthorized' });
   }
 
   try {
-    const weeklyResult = await sql`
-      SELECT * FROM weekly_checkins ORDER BY submitted_at DESC
-    `;
-    const monthlyResult = await sql`
-      SELECT * FROM monthly_reports ORDER BY submitted_at DESC
-    `;
+    const weeklyResult = await sql`SELECT * FROM weekly_checkins ORDER BY submitted_at DESC`;
+    const monthlyResult = await sql`SELECT * FROM monthly_reports ORDER BY submitted_at DESC`;
 
     res.status(200).json({
-      weeklyCheckins: weeklyResult.rows,
-      monthlyReports: monthlyResult.rows
+      weeklyCheckins: Array.isArray(weeklyResult) ? weeklyResult : [],
+      monthlyReports: Array.isArray(monthlyResult) ? monthlyResult : []
     });
   } catch (error) {
     console.error('Error:', error);
