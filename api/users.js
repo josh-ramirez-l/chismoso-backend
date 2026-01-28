@@ -123,13 +123,15 @@ export default async function handler(req, res) {
 
     const users = onlyOnboarding
       ? await sql`
-          SELECT id, email, name, position, role, kpis, created_at, last_seen_at
+          SELECT id, email, name, position, role, kpis, created_at, last_seen_at,
+                 (password_hash IS NOT NULL AND password_hash <> '') AS has_password
           FROM users
           WHERE password_hash IS NOT NULL AND password_hash <> ''
           ORDER BY created_at DESC
         `
       : await sql`
-          SELECT id, email, name, position, role, kpis, created_at, last_seen_at
+          SELECT id, email, name, position, role, kpis, created_at, last_seen_at,
+                 (password_hash IS NOT NULL AND password_hash <> '') AS has_password
           FROM users
           ORDER BY created_at DESC
         `;
