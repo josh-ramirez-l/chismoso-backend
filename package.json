@@ -1,0 +1,13 @@
+{
+  "name": "chismoso-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Chismoso backend API for Vercel",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "resend": "^3.2.0"
+  }
+}
