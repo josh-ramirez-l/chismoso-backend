@@ -75,8 +75,11 @@ export default async function handler(req, res) {
       if (payload?.userId) {
         await ensureUsersTable();
         const me = await sql`SELECT id, role FROM users WHERE id = ${payload.userId}`;
-        if (me.length > 0 && String(me[0].role || '').toLowerCase() === 'developer') {
-          authorized = true;
+        if (me.length > 0) {
+          const role = String(me[0].role || '').toLowerCase();
+          if (role === 'developer' || role === 'director') {
+            authorized = true;
+          }
         }
       }
     }
