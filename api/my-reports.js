@@ -85,20 +85,24 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       weeklyCheckins: weeklyResult.map(row => ({
+        ...row.data,
         id: row.id,
+        serverId: row.id,
+        clientId: row.data?.id || null,
         userEmail: row.user_email,
         userName: row.user_name,
         submittedAt: row.submitted_at,
-        submitted: true,
-        ...row.data
+        submitted: true
       })),
       monthlyReports: monthlyResult.map(row => ({
+        ...row.data,
         id: row.id,
+        serverId: row.id,
+        clientId: row.data?.id || null,
         userEmail: row.user_email,
         userName: row.user_name,
         submittedAt: row.submitted_at,
-        submitted: true,
-        ...row.data
+        submitted: true
       }))
     });
   } catch (error) {

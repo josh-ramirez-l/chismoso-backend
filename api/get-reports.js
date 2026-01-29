@@ -112,8 +112,8 @@ export default async function handler(req, res) {
       }
 
       const type = String(req.query?.type || '').trim().toLowerCase();
-      const id = Number(req.query?.id);
-      if (!Number.isFinite(id) || id <= 0) {
+      const idParam = String(req.query?.id || '').trim();
+      if (!idParam) {
         return res.status(400).json({ error: 'Missing or invalid id' });
       }
 
@@ -121,24 +121,42 @@ export default async function handler(req, res) {
       if (type === 'weekly') {
         // If not admin/developer, verify ownership
         if (!authorized) {
-          const check = await sql`SELECT user_email FROM weekly_checkins WHERE id = ${id}`;
+          const check = await sql`
+            SELECT user_email FROM weekly_checkins
+            WHERE (id::text = ${idParam} OR data->>'id' = ${idParam})
+            LIMIT 1
+          `;
           const ownerEmail = String(check?.[0]?.user_email || '').trim();
           if (!ownerEmail || ownerEmail.toLowerCase() !== String(currentUserEmail || '').trim().toLowerCase()) {
             return res.status(403).json({ error: 'You can only delete your own reports' });
           }
         }
-        const result = await sql`DELETE FROM weekly_checkins WHERE id = ${id} RETURNING id`;
+        const result = await sql`
+          DELETE FROM weekly_checkins
+          WHERE (id::text = ${idParam} OR data->>'id' = ${idParam})
+          ${authorized ? sql`` : sql`AND lower(user_email) = lower(${currentUserEmail})`}
+          RETURNING id
+        `;
         deleted = result?.[0] || null;
       } else if (type === 'monthly') {
         // If not admin/developer, verify ownership
         if (!authorized) {
-          const check = await sql`SELECT user_email FROM monthly_reports WHERE id = ${id}`;
+          const check = await sql`
+            SELECT user_email FROM monthly_reports
+            WHERE (id::text = ${idParam} OR data->>'id' = ${idParam})
+            LIMIT 1
+          `;
           const ownerEmail = String(check?.[0]?.user_email || '').trim();
           if (!ownerEmail || ownerEmail.toLowerCase() !== String(currentUserEmail || '').trim().toLowerCase()) {
             return res.status(403).json({ error: 'You can only delete your own reports' });
           }
         }
-        const result = await sql`DELETE FROM monthly_reports WHERE id = ${id} RETURNING id`;
+        const result = await sql`
+          DELETE FROM monthly_reports
+          WHERE (id::text = ${idParam} OR data->>'id' = ${idParam})
+          ${authorized ? sql`` : sql`AND lower(user_email) = lower(${currentUserEmail})`}
+          RETURNING id
+        `;
         deleted = result?.[0] || null;
       } else {
         return res.status(400).json({ error: 'Invalid type (expected weekly|monthly)' });
