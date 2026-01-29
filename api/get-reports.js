@@ -67,6 +67,8 @@ export default async function handler(req, res) {
 
   // Prefer role-based access (Developer) via JWT; fallback to ADMIN_EMAILS for legacy.
   let authorized = false;
+  let currentUserId = null;
+  let currentUserRole = null;
   const authHeader = req.headers.authorization || '';
   const token = String(authHeader).replace(/^Bearer\s+/i, '').trim();
 
@@ -75,10 +77,11 @@ export default async function handler(req, res) {
       const payload = verifyJWT(token);
       if (payload?.userId) {
         await ensureUsersTable();
-        const me = await sql`SELECT id, role FROM users WHERE id = ${payload.userId}`;
+        const me = await sql`SELECT id, role, email FROM users WHERE id = ${payload.userId}`;
         if (me.length > 0) {
-          const role = String(me[0].role || '').toLowerCase();
-          if (role === 'developer' || role === 'director') {
+          currentUserId = me[0].id;
+          currentUserRole = String(me[0].role || '').toLowerCase();
+          if (currentUserRole === 'developer' || currentUserRole === 'director') {
             authorized = true;
           }
         }
@@ -88,12 +91,20 @@ export default async function handler(req, res) {
     // ignore
   }
 
-  if (!authorized && !isAdminEmail(adminEmail)) {
-    return res.status(403).json({ error: 'Unauthorized' });
+  // For GET requests, require admin/developer role
+  if (req.method === 'GET') {
+    if (!authorized && !isAdminEmail(adminEmail)) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
   }
 
   try {
     if (req.method === 'DELETE') {
+      // For DELETE: Allow if user is admin/developer OR deleting their own report
+      if (!currentUserId) {
+        return res.status(403).json({ error: 'Authentication required' });
+      }
+
       const type = String(req.query?.type || '').trim().toLowerCase();
       const id = Number(req.query?.id);
       if (!Number.isFinite(id) || id <= 0) {
@@ -102,9 +113,23 @@ export default async function handler(req, res) {
 
       let deleted = null;
       if (type === 'weekly') {
+        // If not admin/developer, verify ownership
+        if (!authorized) {
+          const check = await sql`SELECT user_id FROM weekly_checkins WHERE id = ${id}`;
+          if (check.length === 0 || check[0].user_id !== currentUserId) {
+            return res.status(403).json({ error: 'You can only delete your own reports' });
+          }
+        }
         const result = await sql`DELETE FROM weekly_checkins WHERE id = ${id} RETURNING id`;
         deleted = result?.[0] || null;
       } else if (type === 'monthly') {
+        // If not admin/developer, verify ownership
+        if (!authorized) {
+          const check = await sql`SELECT user_id FROM monthly_reports WHERE id = ${id}`;
+          if (check.length === 0 || check[0].user_id !== currentUserId) {
+            return res.status(403).json({ error: 'You can only delete your own reports' });
+          }
+        }
         const result = await sql`DELETE FROM monthly_reports WHERE id = ${id} RETURNING id`;
         deleted = result?.[0] || null;
       } else {
